@@ -1,26 +1,18 @@
 import logging
-import random
 from telegram import Update
 from telegram.ext import ContextTypes
 from bot.telegram_bot import load_top_content
-from generator.templates import (
-    SCENARIO_TEMPLATE,
-    HOOKS,
-    PROBLEMS,
-    SOLUTIONS,
-    PROOFS,
-    CTAS,
-)
+from generator.gemini import generate_scenario
 
 logger = logging.getLogger(__name__)
 
 
 async def handle_scenario_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает нажатие кнопки — генерирует сценарий."""
+    """Обрабатывает нажатие кнопки — генерирует сценарий через Gemini."""
     query = update.callback_query
 
     try:
-        await query.answer()
+        await query.answer("⏳ Генерирую сценарий...")
     except Exception as e:
         logger.warning(f"Не удалось ответить на callback: {e}")
 
@@ -33,22 +25,7 @@ async def handle_scenario_button(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     item = items[idx]
-
-    scenario = SCENARIO_TEMPLATE.format(
-        number=idx + 1,
-        title=item.get("title", "Без названия"),
-        platform=item.get("platform", ""),
-        url=item.get("url", "#"),
-        views=item.get("views", 0),
-        likes=item.get("likes", 0),
-        comments=item.get("comments", 0),
-        reposts=item.get("reposts", 0),
-        hook=random.choice(HOOKS),
-        problem=random.choice(PROBLEMS),
-        solution=random.choice(SOLUTIONS),
-        proof=random.choice(PROOFS),
-        cta=random.choice(CTAS),
-    )
+    scenario = generate_scenario(item)
 
     try:
         await query.message.reply_text(
