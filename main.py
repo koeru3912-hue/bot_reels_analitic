@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Бот-аналитик Reels
-Собирает топ контент с Instagram, YouTube, TikTok, VK,
+Собирает топ контент с YouTube,
 отправляет топ-5 заголовков в Telegram с кнопками.
 По нажатию кнопки — генерирует сценарий.
 """
@@ -19,15 +19,12 @@ PROJECT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_DIR))
 load_dotenv(PROJECT_DIR / ".env")
 
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from parsers.youtube import fetch_youtube_shorts
-from parsers.tiktok import fetch_tiktok_videos
-from parsers.instagram import fetch_instagram_reels
-from parsers.vk import fetch_vk_clips
 from analytics.scorer import rank_content
 from bot.telegram_bot import save_top_content, send_top_message
-from bot.handlers import handle_scenario_button, handle_start
+from bot.handlers import handle_scenario_button, handle_start, handle_reels_button
 from config.settings import TELEGRAM_BOT_TOKEN, TOP_COUNT
 
 logging.basicConfig(
@@ -41,11 +38,7 @@ async def daily_job(context):
     """Ежедневная задача: сбор данных и отправка топ-5."""
     logger.info("Запуск ежедневного сбора данных...")
 
-    all_content = []
-    all_content.extend(fetch_youtube_shorts())
-    all_content.extend(fetch_tiktok_videos())
-    all_content.extend(fetch_instagram_reels())
-    all_content.extend(fetch_vk_clips())
+    all_content = fetch_youtube_shorts()
 
     if not all_content:
         logger.warning("Не удалось собрать контент")
@@ -78,11 +71,19 @@ def main():
     print("   Ctrl+C — остановка")
     print("=" * 50)
 
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(TELEGRAM_BOT_TOKEN)
+        .connect_timeout(30)
+        .read_timeout(30)
+        .write_timeout(30)
+        .build()
+    )
 
     # Обработчики
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("collect", cmd_collect))
+    app.add_handler(MessageHandler(filters.Text(["🎬 Рилсы"]), handle_reels_button))
     app.add_handler(CallbackQueryHandler(handle_scenario_button, pattern=r"^scenario_\d+$"))
 
     # Ежедневная задача в 9:00

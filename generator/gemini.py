@@ -1,10 +1,11 @@
 import os
 import logging
-import google.generativeai as genai
+import requests
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 PROMPT_TEMPLATE = """Ты — эксперт по созданию коротких вертикальных видео (Reels/Shorts/TikTok).
 
@@ -37,12 +38,9 @@ PROMPT_TEMPLATE = """Ты — эксперт по созданию коротк�
 
 
 def generate_scenario(item: dict) -> str:
-    """Генерирует сценарий через Google Gemini на основе данных видео."""
-    if not GEMINI_API_KEY:
-        return "⚠️ GEMINI_API_KEY не задан. Генерация недоступна."
-
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-2.0-flash-lite")
+    """Генерирует сценарий через OpenRouter на основе данных видео."""
+    if not OPENROUTER_API_KEY:
+        return "⚠️ OPENROUTER_API_KEY не задан. Генерация недоступна."
 
     prompt = PROMPT_TEMPLATE.format(
         title=item.get("title", "Без названия"),
@@ -51,11 +49,23 @@ def generate_scenario(item: dict) -> str:
         likes=item.get("likes", 0),
     )
 
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "model": "google/gemma-3-4b-it:free",
+        "messages": [{"role": "user", "content": prompt}],
+    }
+
     try:
-        response = model.generate_content(prompt)
-        scenario_text = response.text
+        resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=120)
+        resp.raise_for_status()
+        data = resp.json()
+        scenario_text = data["choices"][0]["message"]["content"]
     except Exception as e:
-        logger.error(f"Ошибка Gemini API: {e}")
+        logger.error(f"Ошибка OpenRouter API: {e}")
         return f"⚠️ Ошибка генерации сценария: {e}"
 
     title = item.get("title", "Без названия")
