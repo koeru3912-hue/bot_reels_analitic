@@ -7,7 +7,7 @@ from generator.gemini import generate_scenario
 logger = logging.getLogger(__name__)
 
 MAIN_KEYBOARD = ReplyKeyboardMarkup(
-    [["🎬 Рилсы", "📤 Разместить"]],
+    [["🎬 Рилсы", "📤 Разместить"], ["✍️ Написать пост"]],
     resize_keyboard=True,
 )
 
@@ -69,7 +69,8 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👋 Привет! Я бот-аналитик Reels.\n\n"
         "Каждый день в 9:00 я присылаю топ-5 идей для контента.\n"
         "🎬 *Рилсы* — получить топ-5 идей и сценарии\n"
-        "📤 *Разместить* — загрузить видео и опубликовать на все площадки\n\n"
+        "📤 *Разместить* — загрузить видео и опубликовать на все площадки\n"
+        "✍️ *Написать пост* — запишите голосовое, я напишу пост\n\n"
         "Отправьте видео напрямую — я добавлю субтитры и опубликую!",
         reply_markup=MAIN_KEYBOARD,
         parse_mode="Markdown",
