@@ -24,7 +24,8 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Mess
 from parsers.youtube import fetch_youtube_shorts
 from analytics.scorer import rank_content
 from bot.telegram_bot import save_top_content, send_top_message
-from bot.handlers import handle_scenario_button, handle_start, handle_reels_button
+from bot.handlers import handle_scenario_button, handle_start, handle_reels_button, handle_publish_button
+from bot.publish_handler import get_publish_conversation_handler
 from config.settings import TELEGRAM_BOT_TOKEN, TOP_COUNT
 
 logging.basicConfig(
@@ -68,6 +69,7 @@ def main():
     print("🚀 Бот-аналитик Reels запущен")
     print("   Ежедневная отправка в 9:00")
     print("   /collect — ручной запуск")
+    print("   📤 Разместить — публикация видео")
     print("   Ctrl+C — остановка")
     print("=" * 50)
 
@@ -83,7 +85,9 @@ def main():
     # Обработчики
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("collect", cmd_collect))
+    app.add_handler(get_publish_conversation_handler())  # ConversationHandler для публикации
     app.add_handler(MessageHandler(filters.Text(["🎬 Рилсы"]), handle_reels_button))
+    app.add_handler(MessageHandler(filters.Text(["📤 Разместить"]), handle_publish_button))
     app.add_handler(CallbackQueryHandler(handle_scenario_button, pattern=r"^scenario_\d+$"))
 
     # Ежедневная задача в 9:00

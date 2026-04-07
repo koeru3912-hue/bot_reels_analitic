@@ -7,7 +7,7 @@ from generator.gemini import generate_scenario
 logger = logging.getLogger(__name__)
 
 MAIN_KEYBOARD = ReplyKeyboardMarkup(
-    [["🎬 Рилсы"]],
+    [["🎬 Рилсы", "📤 Разместить"]],
     resize_keyboard=True,
 )
 
@@ -51,11 +51,26 @@ async def handle_reels_button(update: Update, context: ContextTypes.DEFAULT_TYPE
     await daily_job(context)
 
 
+async def handle_publish_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает нажатие кнопки 'Разместить'."""
+    await update.message.reply_text(
+        "📤 *Публикация видео*\n\n"
+        "Отправьте мне видео (до 20 МБ), и я:\n"
+        "1. Сгенерирую субтитры (SRT)\n"
+        "2. Опубликую на Instagram, VK и YouTube\n\n"
+        "Просто отправьте видеофайл прямо сюда:",
+        parse_mode="Markdown",
+    )
+
+
 async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обрабатывает команду /start."""
     await update.message.reply_text(
         "👋 Привет! Я бот-аналитик Reels.\n\n"
         "Каждый день в 9:00 я присылаю топ-5 идей для контента.\n"
-        "Нажмите кнопку «🎬 Рилсы» или на номер — получите готовый сценарий.",
+        "🎬 *Рилсы* — получить топ-5 идей и сценарии\n"
+        "📤 *Разместить* — загрузить видео и опубликовать на все площадки\n\n"
+        "Отправьте видео напрямую — я добавлю субтитры и опубликую!",
         reply_markup=MAIN_KEYBOARD,
+        parse_mode="Markdown",
     )
