@@ -24,9 +24,15 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Mess
 from parsers.youtube import fetch_youtube_shorts
 from analytics.scorer import rank_content
 from bot.telegram_bot import save_top_content, send_top_message
-from bot.handlers import handle_scenario_button, handle_start, handle_reels_button, handle_publish_button
-from bot.publish_handler import get_publish_conversation_handler
+from bot.handlers import (
+    handle_scenario_button, handle_start, handle_reels_button,
+    handle_analytics_button, handle_analytics_callback,
+    handle_hooks_button,
+)
 from bot.post_handler import get_post_conversation_handler
+from bot.competitor_handler import get_competitor_conversation_handler
+from bot.commenting_handler import get_commenting_conversation_handler
+from analytics.history import deduplicate, save_daily_top
 from config.settings import TELEGRAM_BOT_TOKEN, TOP_COUNT
 
 logging.basicConfig(
@@ -51,9 +57,11 @@ async def daily_job(context):
         return
 
     ranked = rank_content(all_content)
+    ranked = deduplicate(ranked)
     top = ranked[:TOP_COUNT]
 
     save_top_content(top)
+    save_daily_top(top)
     await send_top_message(context.application)
 
     logger.info(f"Топ-{TOP_COUNT} отправлен")
@@ -70,7 +78,6 @@ def main():
     print("🚀 Бот-аналитик Reels запущен")
     print("   Ежедневная отправка в 9:00")
     print("   /collect — ручной запуск")
-    print("   📤 Разместить — публикация видео")
     print("   ✍️ Написать пост — пост из голосового")
     print("   Ctrl+C — остановка")
     print("=" * 50)
@@ -87,10 +94,13 @@ def main():
     # Обработчики
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("collect", cmd_collect))
-    app.add_handler(get_publish_conversation_handler())  # ConversationHandler для публикации
-    app.add_handler(get_post_conversation_handler())  # ConversationHandler для постов из голосовых
+    app.add_handler(get_post_conversation_handler())
+    app.add_handler(get_competitor_conversation_handler())
+    app.add_handler(get_commenting_conversation_handler())
     app.add_handler(MessageHandler(filters.Text(["🎬 Рилсы"]), handle_reels_button))
-    app.add_handler(MessageHandler(filters.Text(["📤 Разместить"]), handle_publish_button))
+    app.add_handler(MessageHandler(filters.Text(["📊 Аналитика"]), handle_analytics_button))
+    app.add_handler(CallbackQueryHandler(handle_analytics_callback, pattern=r"^analytics_"))
+    app.add_handler(CallbackQueryHandler(handle_hooks_button, pattern=r"^hooks_analysis$"))
     app.add_handler(CallbackQueryHandler(handle_scenario_button, pattern=r"^scenario_\d+$"))
 
     # Ежедневная задача в 9:00

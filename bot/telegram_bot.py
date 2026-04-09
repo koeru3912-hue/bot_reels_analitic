@@ -52,12 +52,15 @@ def build_top_message(items: list[dict]) -> tuple[str, InlineKeyboardMarkup]:
 
     text = "\n".join(lines)
 
-    # Создаём инлайн-кнопки в один ряд
+    # Создаём инлайн-кнопки: номера для сценариев + анализ хуков
     buttons = [
         InlineKeyboardButton(str(i), callback_data=f"scenario_{i-1}")
         for i in range(1, len(items) + 1)
     ]
-    keyboard = InlineKeyboardMarkup([buttons])
+    keyboard = InlineKeyboardMarkup([
+        buttons,
+        [InlineKeyboardButton("🎣 Анализ хуков", callback_data="hooks_analysis")],
+    ])
 
     return text, keyboard
 

@@ -6,16 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 source .venv/bin/activate && python main.py        # запуск бота
-source .venv/bin/activate && python test_send.py    # интеграционный тест (YouTube + Telegram)
 pip install -r requirements.txt                     # установка зависимостей
-python scripts/youtube_auth.py --client-id=ID --client-secret=SECRET  # получение YouTube OAuth2 refresh token
 ```
-
-Системная зависимость: `ffmpeg` (извлечение обложек из видео).
 
 ## Architecture
 
-Telegram-бот для аналитики короткого видео и публикации контента. Python 3.9, async (python-telegram-bot v22+).
+Telegram-бот для аналитики короткого видео и генерации контента. Python 3.9, async (python-telegram-bot v22+).
 
 ### Data pipeline (аналитика)
 
@@ -28,28 +24,22 @@ parsers/{youtube,vk}.py → analytics/scorer.py → bot/telegram_bot.py → Tele
                                               (AI сценарий через OpenRouter)
 ```
 
-### Publishing pipeline (публикация)
+### Bot handlers
 
-```
-Telegram video upload → bot/publish_handler.py (ConversationHandler)
-    → publisher/whisper_srt.py (Whisper API → SRT)
-    → publisher/cover.py (ffmpeg → cover.jpg)
-    → publisher/storage.py (public URL for Instagram)
-    → publisher/{youtube_shorts,vk_clips,instagram}.py
-```
+| Кнопка | Handler | Назначение |
+|--------|---------|-----------|
+| 🎬 Рилсы | `bot/handlers.py` | Сбор топ-5 + AI-сценарии |
+| ✍️ Написать пост | `bot/post_handler.py` | Генерация постов из голосовых |
+| 📊 Аналитика | `bot/handlers.py` | Еженедельный отчёт, история топов |
+| 🔍 Конкуренты | `bot/competitor_handler.py` | Мониторинг каналов конкурентов |
+| 💬 Комментинг | `bot/commenting_handler.py` | AI-комментарии к постам |
 
-`publish_handler.py` использует `ConversationHandler` с состояниями: `VIDEO_RECEIVED → AWAITING_DETAILS → AWAITING_COVER → CONFIRM_PUBLISH`. Каждая площадка публикуется независимо — ошибка одной не блокирует другие.
+Все диалоги используют `ConversationHandler` из python-telegram-bot.
 
 ### Key patterns
 
 - Все API-ключи загружаются через `config/settings.py` из `.env` (python-dotenv)
 - AI-генерация (сценарии, хештеги) идёт через OpenRouter API (`google/gemma-3-4b-it:free`) — паттерн в `generator/gemini.py`
-- Синхронные API-вызовы в publisher/ оборачиваются в `run_in_executor` для совместимости с async-ботом
 - Данные топ-5 кэшируются в `data/top_content.json` между нажатиями кнопок
 - Scoring: `views×1 + likes×2 + comments×3 + reposts×4`, фильтрация по ключевым словам из `config/keywords.py`
-
-### Auth differences
-
-- `YOUTUBE_API_KEY` — только чтение (поиск). Для загрузки видео нужен OAuth2 (`YOUTUBE_CLIENT_ID` + `SECRET` + `REFRESH_TOKEN`)
-- `VK_TOKEN` — service token для поиска. Для публикации нужен `VK_USER_TOKEN` с scope `video,wall`
-- Instagram Graph API требует публичный URL видео (через `publisher/storage.py`) и 60-дневный токен
+- Публикация постов в Telegram-канал + Max через `bot/post_handler.py` и `publisher/max_channel.py`
